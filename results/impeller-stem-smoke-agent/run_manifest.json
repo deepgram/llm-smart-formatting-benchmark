@@ -1,0 +1,30 @@
+{
+  "run_id": "impeller-stem-smoke-agent",
+  "timestamp": "2026-05-06T05:26:44.451132+00:00",
+  "dataset_path": "synthetic_data.csv",
+  "dataset_checksum": "22987928a747c3723e94f0d3c4ee21bd979e1ab5e25f800ac00792929b172538",
+  "dataset_limit": 1,
+  "base_prompt": "Impeller /v2/read entity detection + Stem /dev/format-entities",
+  "base_prompt_hash": "973439ec38fcb44e",
+  "sampling_defaults": {},
+  "concurrency": 8,
+  "parallel_models": 1,
+  "models": [
+    {
+      "model_id": "impeller-stem-baseline",
+      "provider": "deepgram",
+      "openrouter_slug": "",
+      "temperature": null,
+      "top_p": null,
+      "max_tokens": null,
+      "extra_body": {},
+      "provider_routing": {},
+      "supports_streaming": false,
+      "notes": "Existing Deepgram smart-formatting pipeline baseline."
+    }
+  ],
+  "baseline": {
+    "impeller_url": "http://localhost:8080/v2",
+    "stem_url": "http://localhost:8888/v1"
+  }
+}

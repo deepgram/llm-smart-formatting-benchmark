@@ -1,0 +1,10 @@
+sample_id,gpt-oss-20b,llama-3-3-70b,mistral-small-3-2-24b,qwen3-30b
+CANONICAL-AVOMA-RANGE,fail,fail,fail,fail
+CANONICAL-AVOMA-YEAR,pass,pass,pass,pass
+CANONICAL-CRESTA-ACCOUNT-ID,fail,fail,fail,fail
+CANONICAL-CRESTA-CURRENCY,fail,fail,fail,fail
+CANONICAL-CRESTA-PERCENT,pass,pass,pass,fail
+CANONICAL-NIAGARA-ORDERID,pass,fail,fail,pass
+CANONICAL-NIAGARA-PHONE,fail,fail,fail,fail
+CANONICAL-RINGCENTRAL-PHONE,pass,pass,pass,pass
+CANONICAL-TALKATOO-CENTURY,pass,pass,fail,fail

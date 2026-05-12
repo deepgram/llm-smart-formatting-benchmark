@@ -1,0 +1,10 @@
+sample_id,nemotron-3-super-120b,qwen3-14b,qwen3-5-122b,qwen3-5-27b
+CANONICAL-AVOMA-RANGE,fail,fail,fail,fail
+CANONICAL-AVOMA-YEAR,pass,pass,pass,pass
+CANONICAL-CRESTA-ACCOUNT-ID,fail,fail,fail,fail
+CANONICAL-CRESTA-CURRENCY,pass,pass,pass,pass
+CANONICAL-CRESTA-PERCENT,pass,pass,pass,pass
+CANONICAL-NIAGARA-ORDERID,pass,fail,pass,pass
+CANONICAL-NIAGARA-PHONE,fail,fail,fail,fail
+CANONICAL-RINGCENTRAL-PHONE,pass,pass,pass,pass
+CANONICAL-TALKATOO-CENTURY,pass,pass,pass,pass
