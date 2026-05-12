@@ -1,0 +1,30 @@
+datacenter = "baseline"
+instance = "smart-formatting-baseline"
+
+[server]
+base_url = "/v1"
+host = "0.0.0.0"
+port = 8888
+callback_conn_timeout = "1s"
+callback_timeout = "10s"
+fetch_conn_timeout = "1s"
+fetch_timeout = "60s"
+
+[features]
+dev = true
+format_entity_tags = true
+entity_detection = true
+listen_v2 = true
+
+[global]
+debug = true
+
+[[driver_pool.standard]]
+url = "http://impeller:8080/v2"
+timeout_backoff = 1.2
+retry_sleep = "2s"
+retry_backoff = 1.6
+max_response_size = 1073741824
+
+[driver_pool.standard.credentials]
+type = "none"

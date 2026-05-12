@@ -1,0 +1,7 @@
+run_id,model_id,provider,sample_id,base_prompt_hash,formatting_prompt,input_text,expected_output,actual_output,latency_total_ms,latency_ttft_ms,tokens_in,tokens_out,cost_usd,finish_reason,error,attempted_at,completed_at,chain_input_text,baseline_model_id,baseline_error
+chained-smoke-impeller-stem-nemotron-nano-9b-v2-iter09,nemotron-nano-9b,impeller-stem+nvidia,CANONICAL-CRESTA-CURRENCY,7d8c326253d4,,the total amount is one seventy one forty one,the total amount is $171.41,"the total amount is $1.71 41
+",711.39,575.36,2203,14,9.036e-05,stop,,2026-05-06T08:19:24.365183+00:00,2026-05-06T08:19:25.077492+00:00,the total amount is $1.71 41,impeller-stem-baseline,
+chained-smoke-impeller-stem-nemotron-nano-9b-v2-iter09,nemotron-nano-9b,impeller-stem+nvidia,CANONICAL-CRESTA-ACCOUNT-ID,7d8c326253d4,,your account number is one hundred two oh three oh oh four,your account number is 100203004,"your account number is 10203004
+",731.20,574.34,2204,15,9.056e-05,stop,,2026-05-06T08:19:24.365377+00:00,2026-05-06T08:19:25.096607+00:00,your account number is 10203004,impeller-stem-baseline,
+chained-smoke-impeller-stem-nemotron-nano-9b-v2-iter09,nemotron-nano-9b,impeller-stem+nvidia,CANONICAL-CRESTA-PERCENT,7d8c326253d4,,satisfaction was one hundred percent,satisfaction was 100%,"satisfaction was 100%
+",611.74,539.08,2199,10,8.956e-05,stop,,2026-05-06T08:19:25.077739+00:00,2026-05-06T08:19:25.689545+00:00,satisfaction was 100%,impeller-stem-baseline,

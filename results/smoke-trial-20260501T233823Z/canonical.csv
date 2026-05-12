@@ -1,0 +1,10 @@
+sample_id,claude-haiku-4-5,gpt-4o-mini,gpt-5-4-mini
+CANONICAL-AVOMA-RANGE,fail,fail,fail
+CANONICAL-AVOMA-YEAR,pass,pass,pass
+CANONICAL-CRESTA-ACCOUNT-ID,fail,fail,fail
+CANONICAL-CRESTA-CURRENCY,fail,pass,fail
+CANONICAL-CRESTA-PERCENT,pass,pass,pass
+CANONICAL-NIAGARA-ORDERID,fail,fail,pass
+CANONICAL-NIAGARA-PHONE,pass,fail,fail
+CANONICAL-RINGCENTRAL-PHONE,pass,pass,pass
+CANONICAL-TALKATOO-CENTURY,pass,pass,fail

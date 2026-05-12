@@ -1,0 +1,1 @@
+run_id,model_id,provider,sample_id,base_prompt_hash,formatting_prompt,input_text,expected_output,actual_output,latency_total_ms,latency_ttft_ms,tokens_in,tokens_out,cost_usd,finish_reason,error,attempted_at,completed_at

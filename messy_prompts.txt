@@ -1,0 +1,127 @@
+# Messy STT input examples
+# Format: INPUT / PROMPT (optional) / EXPECTED
+# All inputs are lowercase, no punctuation — raw ASR style.
+# Multiple entities per turn, disfluencies, false starts.
+
+---
+
+[1] contact_center | MONEY DATE PHONE_NUMBER
+INPUT: hi yeah uh so i'm calling about a charge on my account of uh three forty two ninety nine from uh march fourth and i need to dispute it my callback number is six one seven five five five oh four nine eight
+EXPECTED: hi yeah uh so i'm calling about a charge on my account of uh $342.99 from uh March 4 and i need to dispute it my callback number is 617-555-0498
+
+---
+
+[2] medical | DATE DRUG_WITH_DOSE CARDINAL
+INPUT: so the patient uh last came in on february twenty second twenty twenty six and we prescribed uh metformin five hundred milligrams twice daily and she weighs about one sixty two pounds
+EXPECTED: so the patient uh last came in on February 22, 2026 and we prescribed uh metformin 500mg twice daily and she weighs about 162 pounds
+
+---
+
+[3] finance | MONEY PERCENT CARDINAL
+INPUT: yeah so the fund returned twenty two point three percent last year and uh the total aum is about three point two billion as of twenty twenty five and we're projecting another fifteen percent for twenty twenty six
+EXPECTED: yeah so the fund returned 22.3% last year and uh the total AUM is about $3.2B as of 2025 and we're projecting another 15% for 2026
+
+---
+
+[4] contact_center | NUMERIC_ID MONEY DATE
+INPUT: okay so the account number is one oh four five six seven eight nine and your last payment of seventy nine ninety nine posted on uh january thirty first twenty twenty six and the next one is due march first
+EXPECTED: okay so the account number is 10456789 and your last payment of $79.99 posted on uh January 31, 2026 and the next one is due March 1
+
+---
+
+[5] voice_agent | PHONE_NUMBER TIME
+INPUT: alright so the technician will come uh between two and four on thursday and if you need to reach them their direct line is eight hundred seven two nine seven two three four and they start calls around eight thirty in the morning
+EXPECTED: alright so the technician will come uh between 2 and 4 on Thursday and if you need to reach them their direct line is 800-729-7234 and they start calls around 8:30 AM
+
+---
+
+[6] meeting | CARDINAL MONEY PERCENT
+INPUT: so we had uh forty seven people on the call and revenue came in at two point one million which is uh up nineteen point five percent year over year and we're targeting uh three million for twenty twenty six
+EXPECTED: so we had uh 47 people on the call and revenue came in at $2.1M which is uh up 19.5% year over year and we're targeting uh $3M for 2026
+
+---
+
+[7] emergency_dispatch | ADDRESS PHONE_NUMBER CARDINAL
+INPUT: caller says the incident is at uh four five two north maple street apartment three b and the callback is nine one four five five five eight eight zero seven and she says there are about twelve people in the building
+EXPECTED: caller says the incident is at uh 452 North Maple Street Apartment 3B and the callback is 914-555-8807 and she says there are about 12 people in the building
+
+---
+
+[8] contact_center | SSN DATE NUMERIC_ID
+INPUT: okay can you verify your social it's uh five five five dash twelve dash one two three four and date of birth is uh august seventh nineteen sixty eight and your policy number is p o l zero zero seven seven four two
+EXPECTED: okay can you verify your social it's uh 555-12-1234 and date of birth is uh August 7, 1968 and your policy number is POL007742
+
+---
+
+[9] contact_center (code-switched FR) | PHONE_NUMBER CARDINAL
+INPUT: oui so the number uh c'est cinq un trois six neuf cinq un sept deux cinq oh six and there are uh twenty three locations in the network
+PROMPT: This is a French-language phone number. Treat spoken French digits as numbers.
+EXPECTED: oui so the number uh c'est 5 1 3 6 9 5 1 7 2 5 0 6 and there are uh 23 locations in the network
+
+---
+
+[10] medical_dictation | DATE CARDINAL DRUG_WITH_DOSE
+INPUT: patient is a forty two year old male presenting on uh april tenth twenty twenty six uh complaining of chest pain for uh three days we started uh lisinopril ten milligrams once daily blood pressure was one forty over ninety
+EXPECTED: patient is a 42 year old male presenting on uh April 10, 2026 uh complaining of chest pain for uh 3 days we started uh lisinopril 10mg once daily blood pressure was 140/90
+
+---
+
+[11] sales_crm | MONEY DATE EMAIL_ADDRESS PHONE_NUMBER
+INPUT: so the deal is worth uh about one point five million and we need to close by uh june thirtieth twenty twenty six their main contact is uh sarah dot lee at acme dot com or you can call her at four one five five five five two two three three
+EXPECTED: so the deal is worth uh about $1.5M and we need to close by uh June 30, 2026 their main contact is uh sarah.lee@acme.com or you can call her at 415-555-2233
+
+---
+
+[12] contact_center | CREDIT_CARD MONEY
+INPUT: okay for the payment i'll use card ending in uh four one one one one one one one one one one one one two three four and the amount is uh three hundred forty two dollars and fifty cents
+PROMPT: Redact all but the last 4 digits of the card number as XXXX XXXX XXXX ####.
+EXPECTED: okay for the payment i'll use card ending in uh XXXX XXXX XXXX 1234 and the amount is uh $342.50
+
+---
+
+[13] finance | PERCENT MONEY CARDINAL
+INPUT: the mortgage rate came in at six point seven five percent on a loan of uh four hundred fifty thousand dollars and the monthly payment would be around uh two thousand nine hundred and forty dollars over thirty years
+EXPECTED: the mortgage rate came in at 6.75% on a loan of uh $450,000 and the monthly payment would be around uh $2,940 over 30 years
+
+---
+
+[14] meeting | DATE MONEY PERCENT
+INPUT: so uh by twenty thirty we're targeting uh one hundred million in arr and uh that's a roughly forty percent compound annual growth rate based on our uh twenty twenty six baseline of about twenty two million
+EXPECTED: so uh by 2030 we're targeting uh $100M in ARR and uh that's a roughly 40% compound annual growth rate based on our uh 2026 baseline of about $22M
+
+---
+
+[15] contact_center | NUMERIC_ID DATE MONEY
+INPUT: your order id is uh one seven dash three four two seven two dash two three eight four and it shipped uh november nineteenth twenty twenty five and the total was uh two fifty seven ninety nine plus uh twenty two dollars shipping
+EXPECTED: your order id is uh 17-34272-2384 and it shipped uh November 19, 2025 and the total was uh $257.99 plus uh $22 shipping
+
+---
+
+[16] voice_agent | TIME DATE
+INPUT: so the appointment is uh let me see uh it's on uh march fifth at uh three thirty in the afternoon and uh if you need to reschedule the deadline to do that is uh forty eight hours before so that would be uh march third by three thirty pm
+EXPECTED: so the appointment is uh let me see uh it's on uh March 5 at uh 3:30 PM and uh if you need to reschedule the deadline to do that is uh 48 hours before so that would be uh March 3 by 3:30 PM
+
+---
+
+[17] contact_center | ADDRESS NUMERIC_ID PHONE_NUMBER
+INPUT: the delivery address is uh one two three main street uh suite four oh one uh boston massachusetts oh two one oh one and the tracking number is uh one z nine nine eight three seven four oh one two three four five six seven eight and any questions call one eight hundred two two two three three three three
+EXPECTED: the delivery address is uh 123 Main Street uh Suite 401 uh Boston Massachusetts 02101 and the tracking number is uh 1Z9983740123456789 and any questions call 1-800-222-3333
+
+---
+
+[18] contact_center (code-switched ES) | MONEY PHONE_NUMBER
+INPUT: si uh el total es uh forty seven fifty and uh if you have questions call us at uh ocho cero cero cinco cinco cinco uno dos tres cuatro
+PROMPT: Treat spoken Spanish digits as numbers.
+EXPECTED: si uh el total es uh $47.50 and uh if you have questions call us at uh 800-555-1234
+
+---
+
+[19] medical | TIME DRUG_WITH_DOSE CARDINAL
+INPUT: take uh aspirin eighty one milligrams once daily in the morning uh preferably around eight or nine am and uh lisinopril twenty milligrams at night around ten pm and uh your next appointment is uh in six weeks
+EXPECTED: take uh aspirin 81mg once daily in the morning uh preferably around 8:00 or 9:00 AM and uh lisinopril 20mg at night around 10:00 PM and uh your next appointment is uh in 6 weeks
+
+---
+
+[20] contact_center | MONEY DATE URL
+INPUT: so your subscription of uh forty nine ninety nine a month renews on uh the fifteenth of each month and uh your invoice is available at uh billing dot acme dot com slash invoices slash twenty twenty six and there's no contract so you can cancel anytime
+EXPECTED: so your subscription of uh $49.99 a month renews on uh the 15th of each month and uh your invoice is available at uh billing.acme.com/invoices/2026 and there's no contract so you can cancel anytime

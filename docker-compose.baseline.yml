@@ -1,0 +1,48 @@
+services:
+  impeller:
+    image: smart-formatting-baseline-impeller:local
+    platform: ${BASELINE_PLATFORM:-linux/amd64}
+    build:
+      context: ../impeller
+      dockerfile: docker/Dockerfile
+      args:
+        DEPENDENCY_IMAGE_TAG: ${IMPELLER_DEPENDENCY_IMAGE_TAG:-stable}
+    command: ["serve", "/config/impeller.toml"]
+    environment:
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      RUST_LOG: ${IMPELLER_RUST_LOG:-info}
+    volumes:
+      - ./docker/baseline/impeller.toml:/config/impeller.toml:ro
+      - ${IMPELLER_ENTITY_DETECTOR_PATH:-../impeller/entity-detector.batch.06bc8f36.dg}:/models/entity-detector.batch.06bc8f36.dg:ro
+      - ${IMPELLER_NOVA_BATCH_PATH:-../impeller/nova-3-general.en.batch.2187e11a.dg}:/models/nova-3-general.en.batch.2187e11a.dg:ro
+    ports:
+      - "${IMPELLER_HOST_PORT:-18080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/v2/status >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  stem:
+    image: smart-formatting-baseline-stem:local
+    platform: ${BASELINE_PLATFORM:-linux/amd64}
+    build:
+      context: ../stem
+      dockerfile: docker/Dockerfile.dc
+    command: ["serve", "/config/stem.toml"]
+    environment:
+      RUST_LOG: ${STEM_RUST_LOG:-info}
+    volumes:
+      - ./docker/baseline/stem.toml:/config/stem.toml:ro
+    ports:
+      - "${STEM_HOST_PORT:-18888}:8888"
+    depends_on:
+      impeller:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null -w '%{http_code}' http://localhost:8888/v1/status | grep -q '^204$'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
