@@ -1,0 +1,5 @@
+{
+  "base_model": "google/gemma-3-270m-it",
+  "output_name": "google/gemma-3-270m-it",
+  "note": "Base-model placeholder for deploy-eval-stop. Not a fine-tune."
+}

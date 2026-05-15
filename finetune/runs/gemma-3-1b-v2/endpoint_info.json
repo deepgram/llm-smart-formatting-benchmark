@@ -1,0 +1,10 @@
+{
+  "id": "endpoint-03aaa16d-c454-469f-b069-6faba7206453",
+  "name": "shawndhawan_cce0/gemma-3-1b-it-smart-fmt-gemma-3-1b-v2-1254a189-9ed29ea7",
+  "model": "shawndhawan_cce0/gemma-3-1b-it-smart-fmt-gemma-3-1b-v2-1254a189",
+  "hardware": "1x_nvidia_h100_80gb_sxm",
+  "display_name": "ft-eval-gemma-3-1b-v2",
+  "inactive_timeout": 0,
+  "created_at": "2026-05-13T22:24:17Z",
+  "run_id": "ft-gemma-3-1b-v2-c1-20260513T222415Z"
+}

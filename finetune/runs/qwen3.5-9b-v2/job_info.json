@@ -1,0 +1,10 @@
+{
+  "base_model": "Qwen/Qwen3.5-9B",
+  "file_id": "file-e8ed53ea-578c-4b32-b865-a686753caf9b",
+  "job_id": "ft-723d2453-4c7c",
+  "learning_rate": 0.0001,
+  "n_epochs": 3,
+  "output_name": "shawndhawan_cce0/Qwen3.5-9B-smart-fmt-qwen3.5-9b-v2-205f6658",
+  "status": "completed",
+  "suffix": "smart-fmt-qwen3.5-9b-v2"
+}

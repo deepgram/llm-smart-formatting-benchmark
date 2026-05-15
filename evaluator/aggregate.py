@@ -91,6 +91,20 @@ SCORE_COLUMNS: list[str] = [
     "methods_agree",
     "disagreement_kind",
     "judge_error",
+    # Optional second-judge columns (e.g. gpt-5.5 cross-check of Opus).
+    # Populated by `evaluator second-judge` or by `evaluator score
+    # --judge2-model …`. Blank in legacy files; readers should treat blank
+    # as "not yet judged by the secondary".
+    "judge2_model",
+    "judge2_accuracy",
+    "judge2_accuracy_reason",
+    "judge2_promptability",
+    "judge2_promptability_reason",
+    "judge2_catastrophic",
+    "judge2_hallucination",
+    "judge2_hallucination_reason",
+    "judge2_error",
+    "judges_agree",
 ]
 
 

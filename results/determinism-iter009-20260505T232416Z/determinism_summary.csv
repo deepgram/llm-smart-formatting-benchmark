@@ -1,0 +1,6 @@
+model_id,n_samples,n_samples_all_identical,pct_samples_all_identical,edit_distance_p50,edit_distance_p95,edit_distance_p99,edit_distance_max,edit_distance_mean,total_pair_count
+qwen3-5-122b,50,42,84.0,0,9,17,17,1.35,39600
+qwen3-next-80b,50,41,82.0,0,11,14,14,1.7,44550
+qwen3-32b-groq,50,40,80.0,0,8,9,9,1.08,49500
+gpt-oss-120b-groq,50,38,76.0,0,33,69,69,4.54,59400
+qwen3-5-27b,50,38,76.0,0,0,5,14,0.19,59400

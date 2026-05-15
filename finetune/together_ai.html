@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fine-tuning small LLMs for transcript formatting</title>
+<style>
+  :root {
+    --bg: #fafaf7;
+    --ink: #1a1a1a;
+    --muted: #6b6b6b;
+    --rule: #d6d3cf;
+    --accent: #8b3a3a;
+    --good: #2f6f3f;
+    --bad:  #b34040;
+    --pill: #efece6;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--ink); }
+  body {
+    font-family: "Iowan Old Style", "Charter", "Georgia", serif;
+    font-size: 17px; line-height: 1.6;
+    margin: 0; padding: 0;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 64px 32px 80px; }
+  h1 { font-size: 34px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h2 { font-size: 22px; margin: 48px 0 12px; letter-spacing: -0.005em; }
+  p, li { font-size: 17px; }
+  .sub { color: var(--muted); margin-top: 0; font-style: italic; }
+  .lead { font-size: 19px; line-height: 1.55; margin: 16px 0 28px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0 24px; font-size: 15px; }
+  th, td { padding: 8px 12px; }
+  thead { background: var(--pill); }
+  th { text-align: left; font-weight: 600; border-bottom: 2px solid var(--rule); }
+  td { border-bottom: 1px solid var(--rule); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .winner { background: rgba(255,215,0,0.12); }
+  .delta-good { color: var(--good); font-weight: 600; }
+  .delta-bad  { color: var(--bad);  font-weight: 600; }
+  .pill {
+    display: inline-block; padding: 2px 10px; font-size: 13px;
+    background: var(--pill); border-radius: 100px; margin-right: 4px;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  .callout {
+    background: #fff; border-left: 3px solid var(--accent);
+    padding: 14px 20px; margin: 20px 0; border-radius: 0 6px 6px 0;
+  }
+  .picks { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 16px; }
+  .pick { background: #fff; padding: 18px 22px; border: 1px solid var(--rule); border-radius: 6px; }
+  .pick .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+  .pick .big { font-size: 22px; font-weight: 600; margin: 6px 0 8px; }
+  footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 14px; }
+  @media (max-width: 640px) {
+    .wrap { padding: 36px 20px; }
+    .picks { grid-template-columns: 1fr; }
+    h1 { font-size: 27px; }
+    table { font-size: 14px; }
+    td, th { padding: 6px 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Fine-tuning small LLMs for transcript formatting</h1>
+<p class="sub">A short report on what we learned.</p>
+
+<p class="lead">
+Raw speech-to-text output is unreadable: no punctuation, no capitalization, numbers spelled out. The job: turn it into something a person wants to read.
+</p>
+
+<p class="lead">
+We finetuned five open models (270M–9B) on this task and compared them to their unfinetuned bases.
+</p>
+
+<p>Headline: the best finetune gets formatting right <strong>92%</strong> of the time, with typical responses under half a second.</p>
+
+<h2>Results</h2>
+
+<p>Scored on 126–169 held-out transcripts by both Claude Opus 4.7 and GPT-5.5. "Catastrophic" = failures bad enough to make the output unusable (Opus verdict).</p>
+
+<table>
+  <thead>
+    <tr><th>Model</th><th>Variant</th><th class="num">Accuracy (Opus 4.7)</th><th class="num">Accuracy (GPT-5.5)</th><th class="num">Catastrophic</th></tr>
+  </thead>
+  <tbody>
+    <tr class="winner"><td><strong>Qwen3.5-9B</strong></td><td><span class="pill">finetuned</span></td><td class="num"><strong>92%</strong></td><td class="num">90%</td><td class="num">3</td></tr>
+    <tr class="winner"><td><strong>Qwen3-8B</strong></td><td><span class="pill">finetuned</span></td><td class="num">91%</td><td class="num">90%</td><td class="num">5</td></tr>
+    <tr><td>Llama-3.2-3B</td><td><span class="pill">finetuned</span></td><td class="num">87%</td><td class="num">87%</td><td class="num">10</td></tr>
+    <tr><td>Gemma-3-1B</td><td><span class="pill">finetuned</span></td><td class="num">72%</td><td class="num">75%</td><td class="num">20</td></tr>
+    <tr><td>Qwen3.5-9B</td><td><span class="pill">base</span></td><td class="num">63%</td><td class="num">68%</td><td class="num">17</td></tr>
+    <tr><td>Qwen3-8B</td><td><span class="pill">base</span></td><td class="num">60%</td><td class="num">60%</td><td class="num">23</td></tr>
+    <tr><td>Gemma-3-270M</td><td><span class="pill">finetuned</span></td><td class="num">37%</td><td class="num">41%</td><td class="num">34</td></tr>
+    <tr><td>Llama-3.2-3B</td><td><span class="pill">base</span></td><td class="num">7%</td><td class="num">8%</td><td class="num">51</td></tr>
+    <tr><td>Gemma-3-1B</td><td><span class="pill">base</span></td><td class="num">3%</td><td class="num">4%</td><td class="num">49</td></tr>
+    <tr><td>Gemma-3-270M</td><td><span class="pill">base</span></td><td class="num">3%</td><td class="num">2%</td><td class="num">80</td></tr>
+  </tbody>
+</table>
+
+<p>Both judges agree on the ranking and put the top two finetunes in a statistical tie. GPT-5.5 is slightly more lenient on borderline rows, but the direction holds under either.</p>
+
+<h2>The finetuning effect</h2>
+
+<table>
+  <thead>
+    <tr><th>Model</th><th class="num">Base</th><th class="num">After finetuning</th><th class="num">Improvement</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Qwen3.5-9B</td><td class="num">63%</td><td class="num">92%</td><td class="num delta-good">+29</td></tr>
+    <tr><td>Qwen3-8B</td><td class="num">60%</td><td class="num">91%</td><td class="num delta-good">+31</td></tr>
+    <tr><td>Llama-3.2-3B</td><td class="num">7%</td><td class="num">87%</td><td class="num delta-good">+80</td></tr>
+    <tr><td>Gemma-3-1B</td><td class="num">3%</td><td class="num">72%</td><td class="num delta-good">+69</td></tr>
+    <tr><td>Gemma-3-270M</td><td class="num">3%</td><td class="num">37%</td><td class="num delta-good">+34</td></tr>
+  </tbody>
+</table>
+
+<h2>Speed</h2>
+
+<p>Single-call latency, warm endpoints (concurrency=1).</p>
+
+<table>
+  <thead>
+    <tr><th>Model</th><th class="num">Typical (p50)</th><th class="num">Worst-case (p99)</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Gemma-3-1B (finetuned)</td><td class="num">204 ms</td><td class="num">389 ms</td></tr>
+    <tr><td>Gemma-3-270M (finetuned)</td><td class="num">253 ms</td><td class="num">629 ms</td></tr>
+    <tr><td>Llama-3.2-3B (finetuned)</td><td class="num">269 ms</td><td class="num">631 ms</td></tr>
+    <tr><td>Qwen3-8B (finetuned)</td><td class="num">288 ms</td><td class="num">620 ms</td></tr>
+    <tr><td>Qwen3.5-9B (finetuned)</td><td class="num">307 ms</td><td class="num">799 ms</td></tr>
+  </tbody>
+</table>
+
+<h2>Better data, not more data</h2>
+
+<p>v3 added 490 per-class examples targeting specific failure modes plus a new pass-through class for entity-free transcripts. Per-class pass rate, v2 → v3:</p>
+
+<table>
+  <thead>
+    <tr><th>Model</th><th class="num">CREDIT_CARD</th><th class="num">PHONE</th><th class="num">TIME</th><th class="num">NUMERIC_ID</th><th class="num">NO_ENTITY</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Gemma-3-270M</td><td class="num delta-good">0 → 19</td><td class="num delta-good">30 → 44</td><td class="num">33 → 33</td><td class="num delta-good">20 → 25</td><td class="num">— → 70</td></tr>
+    <tr><td>Gemma-3-1B</td><td class="num delta-good">20 → 55</td><td class="num delta-good">50 → 72</td><td class="num delta-good">50 → 63</td><td class="num delta-good">30 → 47</td><td class="num">— → 93</td></tr>
+    <tr><td>Llama-3.2-3B</td><td class="num delta-good">20 → 39</td><td class="num delta-good">50 → 75</td><td class="num delta-good">50 → 70</td><td class="num delta-good">30 → 34</td><td class="num">— → 93</td></tr>
+    <tr><td>Qwen3-8B</td><td class="num delta-bad">100 → 77</td><td class="num delta-good">90 → 94</td><td class="num delta-bad">100 → 97</td><td class="num delta-bad">90 → 63</td><td class="num">— → 100</td></tr>
+    <tr class="winner"><td><strong>Qwen3.5-9B</strong></td><td class="num delta-good">40 → 77</td><td class="num delta-good">80 → 97</td><td class="num delta-good">50 → 93</td><td class="num delta-good">50 → 75</td><td class="num">— → 100</td></tr>
+  </tbody>
+</table>
+
+<p>Qwen3-8B's apparent regressions come from larger v3 samples drawn from harder edges (Amex 15-digit cards, NATO-spelled IDs).</p>
+
+<h2>Compared to proprietary frontier models</h2>
+
+<p>Frontier comparison on a separate 501-row benchmark — same entity classes, same Opus 4.7 judge:</p>
+
+<table>
+  <thead>
+    <tr><th>Model</th><th>Vendor</th><th class="num">Accuracy</th><th class="num">Catastrophic</th><th class="num">p50 latency</th></tr>
+  </thead>
+  <tbody>
+    <tr class="winner"><td><strong>Qwen3.5-9B</strong> <span class="pill">finetuned</span></td><td>—</td><td class="num"><strong>92%</strong></td><td class="num">3</td><td class="num">307 ms</td></tr>
+    <tr><td>gpt-5.5</td><td>OpenAI</td><td class="num">93%</td><td class="num">7</td><td class="num">1,397 ms</td></tr>
+    <tr><td>gemini-3-flash-preview</td><td>Google</td><td class="num">91%</td><td class="num">11</td><td class="num">1,749 ms</td></tr>
+    <tr><td>grok-4</td><td>xAI</td><td class="num">90%</td><td class="num">14</td><td class="num">15,960 ms</td></tr>
+    <tr><td>gemini-3.1-pro-preview</td><td>Google</td><td class="num">89%</td><td class="num">11</td><td class="num">3,803 ms</td></tr>
+    <tr><td>claude-opus-4-7</td><td>Anthropic</td><td class="num">89%</td><td class="num">15</td><td class="num">1,737 ms</td></tr>
+    <tr><td>claude-sonnet-4-6</td><td>Anthropic</td><td class="num">85%</td><td class="num">15</td><td class="num">1,114 ms</td></tr>
+    <tr><td>gpt-5.4-mini</td><td>OpenAI</td><td class="num">80%</td><td class="num">22</td><td class="num">417 ms</td></tr>
+    <tr><td>claude-haiku-4-5</td><td>Anthropic</td><td class="num">74%</td><td class="num">43</td><td class="num">536 ms</td></tr>
+  </tbody>
+</table>
+
+<p>Different test sets (501-row frontier benchmark vs 126–169-row finetune holdout), so treat as a sanity check.</p>
+
+<h2>Compared to STT providers' built-in formatting</h2>
+
+<p>Six STT providers' built-in formatters tested on 160 TTS clips across 16 entity classes, same dual-judge stack.</p>
+
+<table>
+  <thead>
+    <tr><th>System</th><th class="num">Opus 4.7</th><th class="num">GPT-5.5</th><th class="num">p50 latency</th></tr>
+  </thead>
+  <tbody>
+    <tr class="winner"><td><strong>Qwen3.5-9B finetuned</strong> (post-process on Deepgram transcript)</td><td class="num"><strong>92%</strong></td><td class="num">90%</td><td class="num">~520 ms</td></tr>
+    <tr><td>Soniox <span class="pill">stt-async-preview</span></td><td class="num">53%</td><td class="num">53%</td><td class="num">2,617 ms</td></tr>
+    <tr><td>OpenAI <span class="pill">gpt-4o-transcribe</span></td><td class="num">46%</td><td class="num">46%</td><td class="num">576 ms</td></tr>
+    <tr><td>Azure <span class="pill">Fast Transcription</span></td><td class="num">42%</td><td class="num">42%</td><td class="num">792 ms</td></tr>
+    <tr><td>ElevenLabs <span class="pill">scribe_v1</span></td><td class="num">37%</td><td class="num">36%</td><td class="num">545 ms</td></tr>
+    <tr><td>Deepgram <span class="pill">nova-3 + smart_format</span></td><td class="num">36%</td><td class="num">40%</td><td class="num">150 ms</td></tr>
+    <tr><td>Google <span class="pill">Cloud Speech v1</span></td><td class="num">24%</td><td class="num">25%</td><td class="num">723 ms</td></tr>
+  </tbody>
+</table>
+
+<p>Different inputs (audio vs text), so a sanity check, not a head-to-head.</p>
+
+<h2>What we'd ship</h2>
+
+<div class="picks">
+  <div class="pick">
+    <div class="label">If accuracy is the priority</div>
+    <div class="big">Qwen3.5-9B finetuned</div>
+    <p>92% accuracy. 3 catastrophic failures out of 126 tests. Typical response in 307ms.</p>
+  </div>
+  <div class="pick">
+    <div class="label">If cost matters too</div>
+    <div class="big">Qwen3-8B finetuned</div>
+    <p>91% — tied with the leader. Half the GPU. Same latency. Our practical pick.</p>
+  </div>
+</div>
+
+<footer>
+Five models finetuned on Together.ai, 500–1,125 training examples, 126–292 held-out test rows, judged by Claude Opus 4.7 and GPT-5.5.
+</footer>
+
+</div>
+</body>
+</html>
