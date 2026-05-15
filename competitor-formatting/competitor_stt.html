@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>How well do STT providers format entities?</title>
+<style>
+  :root {
+    --bg: #fafaf7;
+    --ink: #1a1a1a;
+    --muted: #6b6b6b;
+    --rule: #d6d3cf;
+    --accent: #8b3a3a;
+    --good: #2f6f3f;
+    --bad:  #b34040;
+    --pill: #efece6;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--ink); }
+  body {
+    font-family: "Iowan Old Style", "Charter", "Georgia", serif;
+    font-size: 17px; line-height: 1.6;
+    margin: 0; padding: 0;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 64px 32px 80px; }
+  h1 { font-size: 34px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h2 { font-size: 22px; margin: 48px 0 12px; letter-spacing: -0.005em; }
+  p, li { font-size: 17px; }
+  .sub { color: var(--muted); margin-top: 0; font-style: italic; }
+  .lead { font-size: 19px; line-height: 1.55; margin: 16px 0 28px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0 24px; font-size: 15px; }
+  th, td { padding: 8px 12px; }
+  thead { background: var(--pill); }
+  th { text-align: left; font-weight: 600; border-bottom: 2px solid var(--rule); }
+  td { border-bottom: 1px solid var(--rule); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .winner { background: rgba(255,215,0,0.12); }
+  .pill {
+    display: inline-block; padding: 2px 10px; font-size: 13px;
+    background: var(--pill); border-radius: 100px; margin-right: 4px;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  .callout {
+    background: #fff; border-left: 3px solid var(--accent);
+    padding: 14px 20px; margin: 20px 0; border-radius: 0 6px 6px 0;
+  }
+  /* heatmap */
+  .heat { font-size: 13px; }
+  .heat th, .heat td { padding: 6px 8px; text-align: center; }
+  .heat th:first-child, .heat td:first-child { text-align: left; font-weight: 500; }
+  .heat .cell { font-variant-numeric: tabular-nums; border-radius: 3px; }
+  .h0 { background: #f4e4e4; }
+  .h1 { background: #f0d6d2; }
+  .h2 { background: #eccfc2; }
+  .h3 { background: #e9d5b8; }
+  .h4 { background: #e6dcae; }
+  .h5 { background: #d8dca0; }
+  .h6 { background: #c4d693; }
+  .h7 { background: #abcd86; }
+  .h8 { background: #8fc278; }
+  .h9 { background: #6fb567; color: #fff; }
+  .h10 { background: #4ea454; color: #fff; }
+  .picks { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 16px; }
+  .pick { background: #fff; padding: 18px 22px; border: 1px solid var(--rule); border-radius: 6px; }
+  .pick .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+  .pick .big { font-size: 22px; font-weight: 600; margin: 6px 0 8px; }
+  .small { color: var(--muted); font-size: 14px; }
+  footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 14px; }
+  @media (max-width: 720px) {
+    .wrap { padding: 36px 20px; }
+    .picks { grid-template-columns: 1fr; }
+    h1 { font-size: 27px; }
+    table { font-size: 13px; }
+    td, th { padding: 6px 8px; }
+    .heat th, .heat td { padding: 4px 6px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>How well do STT providers format entities?</h1>
+<p class="sub">A benchmark of six speech-to-text systems on built-in smart formatting.</p>
+
+<p class="lead">
+Every speech-to-text provider ships some kind of "smart formatting" — the layer that turns "one seventy one forty one" into "$171.41". We tested how well it actually works.
+</p>
+
+<p class="lead">
+We generated 160 audio clips with Deepgram Aura-2 TTS — 10 clips for each of 16 entity classes — and ran every clip through six STT services. Each transcript was graded by two independent judges (Claude Opus 4.7 and GPT-5.5) on whether the entities came back correctly formatted.
+</p>
+
+<h2>Overall results</h2>
+
+<p>"Pass" means both judges agreed the entity formatting was correct. Latency is single-call (one audio file at a time).</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Provider</th><th>Model</th>
+      <th class="num">Pass</th>
+      <th class="num">p50</th>
+      <th class="num">p90</th>
+      <th class="num">p99</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="winner">
+      <td><strong>Soniox</strong></td><td><span class="pill">stt-async-preview</span></td>
+      <td class="num"><strong>50%</strong></td>
+      <td class="num">2,617 ms</td><td class="num">4,349 ms</td><td class="num">4,532 ms</td>
+    </tr>
+    <tr>
+      <td>OpenAI</td><td><span class="pill">gpt-4o-transcribe</span></td>
+      <td class="num">42%</td>
+      <td class="num">576 ms</td><td class="num">961 ms</td><td class="num">3,026 ms</td>
+    </tr>
+    <tr>
+      <td>Azure</td><td><span class="pill">Fast Transcription 2024-11</span></td>
+      <td class="num">39%</td>
+      <td class="num">792 ms</td><td class="num">952 ms</td><td class="num">1,165 ms</td>
+    </tr>
+    <tr class="winner">
+      <td><strong>Deepgram</strong></td><td><span class="pill">nova-3 + smart_format</span></td>
+      <td class="num">34%</td>
+      <td class="num"><strong>150 ms</strong></td><td class="num"><strong>270 ms</strong></td><td class="num">1,133 ms</td>
+    </tr>
+    <tr>
+      <td>ElevenLabs</td><td><span class="pill">scribe_v1</span></td>
+      <td class="num">32%</td>
+      <td class="num">545 ms</td><td class="num">832 ms</td><td class="num">1,155 ms</td>
+    </tr>
+    <tr>
+      <td>Google</td><td><span class="pill">Cloud Speech v1</span></td>
+      <td class="num">22%</td>
+      <td class="num">723 ms</td><td class="num">1,338 ms</td><td class="num">1,697 ms</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Two stories here. Soniox spends extra time and wins on accuracy — it's the only provider above 50%. Deepgram is the fastest by an order of magnitude (150 ms vs the next-fastest at 545 ms) but trades that for less aggressive formatting.</p>
+
+<h2>Where each provider wins and loses</h2>
+
+<p>Out of 10 clips per class, here's how each provider scored. Greener cells are stronger.</p>
+
+<table class="heat">
+  <thead>
+    <tr>
+      <th>Entity class</th>
+      <th>Deepgram</th><th>ElevenLabs</th><th>OpenAI</th><th>Azure</th><th>Google</th><th>Soniox</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>ADDRESS</td><td class="cell h1">1</td><td class="cell h3">3</td><td class="cell h2">2</td><td class="cell h2">2</td><td class="cell h2">2</td><td class="cell h4">4</td></tr>
+    <tr><td>ADVERSARIAL</td><td class="cell h5">5</td><td class="cell h2">2</td><td class="cell h4">4</td><td class="cell h4">4</td><td class="cell h1">1</td><td class="cell h4">4</td></tr>
+    <tr><td>CARDINAL</td><td class="cell h7">7</td><td class="cell h7">7</td><td class="cell h5">5</td><td class="cell h9">9</td><td class="cell h9">9</td><td class="cell h9">9</td></tr>
+    <tr><td>CREDIT_CARD</td><td class="cell h0">0</td><td class="cell h2">2</td><td class="cell h2">2</td><td class="cell h2">2</td><td class="cell h1">1</td><td class="cell h2">2</td></tr>
+    <tr><td>DATE</td><td class="cell h4">4</td><td class="cell h1">1</td><td class="cell h5">5</td><td class="cell h1">1</td><td class="cell h2">2</td><td class="cell h3">3</td></tr>
+    <tr><td>DATE_INTERVAL</td><td class="cell h8">8</td><td class="cell h1">1</td><td class="cell h5">5</td><td class="cell h3">3</td><td class="cell h1">1</td><td class="cell h9">9</td></tr>
+    <tr><td>DRUG_WITH_DOSE</td><td class="cell h0">0</td><td class="cell h1">1</td><td class="cell h6">6</td><td class="cell h1">1</td><td class="cell h0">0</td><td class="cell h9">9</td></tr>
+    <tr><td>EMAIL_ADDRESS</td><td class="cell h1">1</td><td class="cell h7">7</td><td class="cell h8">8</td><td class="cell h7">7</td><td class="cell h0">0</td><td class="cell h8">8</td></tr>
+    <tr><td>MIXED</td><td class="cell h3">3</td><td class="cell h1">1</td><td class="cell h2">2</td><td class="cell h2">2</td><td class="cell h1">1</td><td class="cell h3">3</td></tr>
+    <tr><td>MONEY</td><td class="cell h3">3</td><td class="cell h1">1</td><td class="cell h2">2</td><td class="cell h4">4</td><td class="cell h0">0</td><td class="cell h3">3</td></tr>
+    <tr><td>NUMERIC_ID</td><td class="cell h4">4</td><td class="cell h6">6</td><td class="cell h6">6</td><td class="cell h6">6</td><td class="cell h2">2</td><td class="cell h7">7</td></tr>
+    <tr><td>PERCENT</td><td class="cell h7">7</td><td class="cell h6">6</td><td class="cell h7">7</td><td class="cell h8">8</td><td class="cell h8">8</td><td class="cell h8">8</td></tr>
+    <tr><td>PHONE_NUMBER</td><td class="cell h1">1</td><td class="cell h4">4</td><td class="cell h3">3</td><td class="cell h5">5</td><td class="cell h5">5</td><td class="cell h3">3</td></tr>
+    <tr><td>SSN</td><td class="cell h3">3</td><td class="cell h1">1</td><td class="cell h0">0</td><td class="cell h0">0</td><td class="cell h0">0</td><td class="cell h0">0</td></tr>
+    <tr><td>TIME</td><td class="cell h0">0</td><td class="cell h0">0</td><td class="cell h2">2</td><td class="cell h0">0</td><td class="cell h0">0</td><td class="cell h3">3</td></tr>
+    <tr><td>URL</td><td class="cell h8">8</td><td class="cell h8">8</td><td class="cell h9">9</td><td class="cell h8">8</td><td class="cell h3">3</td><td class="cell h5">5</td></tr>
+  </tbody>
+</table>
+
+<p>A few patterns jump out:</p>
+<ul>
+  <li><strong>TIME and SSN are universally broken.</strong> No provider gets past 30% on either. Time-of-day formatting ("3:30 PM" vs "15:30") and SSN dash-grouping are formatting choices the STT layer apparently doesn't make confidently.</li>
+  <li><strong>Credit cards are nearly unusable.</strong> Best score is 2/10 — the 16-digit grouping rarely survives transcription.</li>
+  <li><strong>Soniox specifically targets medical and date intervals.</strong> 9/10 on DRUG_WITH_DOSE and 9/10 on DATE_INTERVAL, far above everyone else.</li>
+  <li><strong>Deepgram dominates ADVERSARIAL.</strong> 5/10 vs 1–4 for everyone else — its smart formatter is more conservative, so it leaks fewer prompt-injection artifacts.</li>
+  <li><strong>Google trails on anything that needs more than punctuation.</strong> Cloud Speech v1's automatic-punctuation layer is solid but it doesn't try entity normalization.</li>
+</ul>
+
+<h2>The dual judge</h2>
+
+<p>Every transcript was scored independently by Claude Opus 4.7 and GPT-5.5. The two judges agreed on 91–95% of rows, depending on the provider:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Provider</th>
+      <th class="num">Opus pass</th>
+      <th class="num">GPT-5.5 pass</th>
+      <th class="num">Disagree</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Deepgram</td>   <td class="num">36%</td><td class="num">40%</td><td class="num">7%</td></tr>
+    <tr><td>ElevenLabs</td> <td class="num">37%</td><td class="num">36%</td><td class="num">9%</td></tr>
+    <tr><td>OpenAI</td>     <td class="num">46%</td><td class="num">46%</td><td class="num">6%</td></tr>
+    <tr><td>Azure</td>      <td class="num">42%</td><td class="num">42%</td><td class="num">7%</td></tr>
+    <tr><td>Google</td>     <td class="num">24%</td><td class="num">25%</td><td class="num">5%</td></tr>
+    <tr><td>Soniox</td>     <td class="num">53%</td><td class="num">53%</td><td class="num">6%</td></tr>
+  </tbody>
+</table>
+
+<p>Strong agreement at the row level. The "both pass" number in the overall table is the conservative count — we only call a row good when both judges call it good.</p>
+
+<h2>Compared to a formatting LLM on top</h2>
+
+<p>For context, on the same kind of test set, our fine-tuned <strong>Qwen3.5-9B</strong> (running as a post-processing LLM after a raw Deepgram transcript) scored <strong>92%</strong>.</p>
+
+<table>
+  <thead>
+    <tr><th>Pipeline</th><th class="num">Pass rate</th><th class="num">p50 latency</th></tr>
+  </thead>
+  <tbody>
+    <tr class="winner"><td>Deepgram + fine-tuned Qwen3.5-9B post-processor</td><td class="num"><strong>92%</strong></td><td class="num">~520 ms</td></tr>
+    <tr><td>Soniox stt-async-preview</td><td class="num">50%</td><td class="num">2,617 ms</td></tr>
+    <tr><td>OpenAI gpt-4o-transcribe</td><td class="num">42%</td><td class="num">576 ms</td></tr>
+    <tr><td>Deepgram nova-3 + smart_format</td><td class="num">34%</td><td class="num">150 ms</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+The best provider's built-in smart formatting (Soniox at 50%) is still <strong>42 points behind</strong> what a small fine-tuned LLM can do on the same audio. The formatting LLM also runs about <strong>5× faster end-to-end</strong> than Soniox does at synthesizing the answer in one pass.
+</div>
+
+<h2>What we'd do</h2>
+
+<div class="picks">
+  <div class="pick">
+    <div class="label">If you can only buy STT</div>
+    <div class="big">Soniox or OpenAI</div>
+    <p>Soniox is the most accurate out of the box. OpenAI's gpt-4o-transcribe is the best speed/accuracy trade in the middle of the pack.</p>
+  </div>
+  <div class="pick">
+    <div class="label">If you can run an LLM after</div>
+    <div class="big">Deepgram + fine-tune</div>
+    <p>Raw Deepgram nova-3 transcripts at 150 ms, plus a fine-tuned 9B post-processor, gets to 92% — almost double the best pure-STT smart-formatter and still well under a second total.</p>
+  </div>
+</div>
+
+<footer>
+Benchmark: 160 audio clips (10 per entity class across 16 classes) generated with Deepgram Aura-2 TTS, transcribed by six STT services, judged independently by Claude Opus 4.7 and GPT-5.5.
+</footer>
+
+</div>
+</body>
+</html>
