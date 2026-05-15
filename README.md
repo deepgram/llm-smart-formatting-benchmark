@@ -1,181 +1,143 @@
 # smart-formatting-llm-benchmark
 
-Async runner that drives the synthetic-data CSV through every selected LLM via
-OpenRouter, capturing model output and latency per row. Resumable, with one
-folder per run under `results/`.
+Benchmarks for **smart formatting** — turning raw spoken-form transcripts
+(`"my number is two four eight..."`) into clean written form
+(`"My number is (248) 123-4567."`).
+
+Three evals, each with its own CLI:
+
+| Eval | Where | Measures |
+| --- | --- | --- |
+| LLM post-processing | `runner/` + `evaluator/` | Frontier LLMs as a formatting step after STT (text in, text out). |
+| Fine-tuned small models | `finetune/` | LoRA fine-tunes on Together.ai (Gemma, Llama, Qwen, Mercury). |
+| Competitor STT | `competitor-formatting/` | Deepgram vs ElevenLabs / OpenAI / Azure / Google / Soniox, on audio. |
+
+Also `iterate/` for fast prompt tuning against one or two cheap models.
+Task contract: [`GUIDELINE.md`](GUIDELINE.md). Prompt guidance:
+[`PROMPT_GUIDE.md`](PROMPT_GUIDE.md). Latest fine-tune writeup:
+[`finetune/together_ai_v3.md`](finetune/together_ai_v3.md).
 
 ## Install
 
-Requires Python 3.11+.
+Python 3.11+. `uv sync` (or `pip install -e .`). Set only the API keys
+you need per eval below.
+
+---
+
+## 1. LLM post-processing (`runner` + `evaluator`)
 
 ```bash
-uv sync
+export OPENROUTER_API_KEY=...   # runner
+export ANTHROPIC_API_KEY=...    # evaluator's LLM judge
 ```
 
-(Or `pip install -e .` if you prefer.)
-
-## Environment
-
 ```bash
-export OPENROUTER_API_KEY=<your-key>
-```
-
-The runner refuses to start without it.
-
-## Quick sanity check (no API calls)
-
-```bash
-uv run runner run --dry-run --limit 3 --models claude-opus-4-7
-```
-
-This prints the first three fully-rendered request bodies — system prompt,
-user message, sampling params, thinking/reasoning extras, and provider
-routing — so you can verify what will be sent before spending any money.
-
-List the registered models and OpenRouter slugs:
-
-```bash
-uv run runner list-models
-```
-
-Inspect the base prompt (and its hash, recorded with every result):
-
-```bash
-uv run runner show-prompt
-```
-
-## Real run
-
-All models, full dataset:
-
-```bash
-uv run runner run --models all --dataset synthetic_data.csv --run-id auto
-```
-
-Subset of models with a small smoke run:
-
-```bash
-uv run runner run --models claude-opus-4-7,gpt-5-5 --limit 50
-```
-
-Higher concurrency or parallel models:
-
-```bash
+uv run runner list-models                                   # registered models + slugs
+uv run runner show-prompt                                   # base prompt + hash
+uv run runner run --dry-run --limit 3 --models claude-opus-4-7   # no API calls
 uv run runner run --models all --concurrency 16 --parallel-models 2
+uv run runner resume <run_id>                               # re-run, skip done rows
+uv run evaluator score --responses results/<run_id>         # writes scored.csv, summary.csv, report.md
 ```
 
-## Existing Pipeline Baseline
+Output lands in `results/<run_id>/`: `responses.csv`,
+`run_manifest.json`, plus `scored.csv` / `summary.csv` /
+`canonical.csv` / `report.md` after scoring. Resume is keyed on
+`(model_id, sample_id)`; delete failed rows from `responses.csv` to
+retry.
 
-This repo can also run Deepgram's existing smart-formatting pipeline as a
-benchmark baseline:
+Four scorers per row: exact match, entity-class regex, Claude Opus 4.7
+judge for accuracy (`pass | style_violation | numeric_drift |
+wrong_value | other`, plus `catastrophic` + `promptability`), and the
+same judge for hallucination (`none | minor_addition | dropped_content
+| fabricated`).
 
-```text
-Impeller /v2/read -> inline entity tag adapter -> Stem /dev/format-entities
-```
+### Baseline + chained
 
-Start the services locally with Cargo first. Use local config files that enable
-Impeller NER, Stem dev mode, and point Stem at `http://localhost:8080/v2`.
-With the model files in the Impeller repo root, Impeller's model search path can
-include that root directory.
-
-```bash
-# Terminal 1
-cd ../impeller
-cargo run -- -v serve conf/<your-local-impeller-config>.toml
-
-# Terminal 2
-cd ../stem
-cargo run -- -v serve conf/<your-local-stem-config>.toml
-```
-
-Expected local ports:
-
-- Impeller: `http://localhost:8080/v2`
-- Stem: `http://localhost:8888/v1`
-
-Smoke test Stem's formatter directly:
-
-```bash
-curl -s -X POST http://localhost:8888/v1/dev/format-entities \
-  -H 'Content-Type: application/json' \
-  -d '{"entity_tagged_text":"my number is <entity> two four eight one two three four five six seven </entity_PHONE_NUMBER>"}'
-```
-
-Then run a baseline benchmark:
+The existing Deepgram pipeline (Impeller `/v2/read` → entity-tag
+adapter → Stem `/dev/format-entities`) as a baseline. Start Impeller
+and Stem locally with Cargo (or via `docker-compose.baseline.yml`),
+then:
 
 ```bash
 uv run runner baseline --limit 50 --run-id impeller-stem-smoke
+uv run runner chained --models qwen3-32b-groq --prompt prompts/system_prompt.md   # baseline → LLM cleanup
+uv run runner determinism --models qwen3-32b-groq --prompt iterate/results/iter-009-XXXX/prompt.txt --trials 100
 ```
 
-For the full dataset:
+Both `baseline` and `chained` write a normal `responses.csv`, so
+`evaluator score` works the same on them. The baseline ignores
+`formatting_prompt` (no prompt channel in the existing pipeline).
+
+### Editing models / prompts
+
+- `runner/models.py` is the source of truth. `model_id` is the unique key written everywhere — make a new entry rather than reusing one.
+- `runner/prompts.py::BASE_PROMPT` is the always-on system prompt; its 12-char SHA-256 is recorded per row, so old/new runs stay distinguishable.
+- Reasoning is **off by default** — latency > peak quality for this task.
+- A few OpenRouter slugs are speculative; verify against `openrouter.ai/api/v1/models` before a real spend.
+
+---
+
+## 2. Fine-tuning (`finetune`)
 
 ```bash
-uv run runner baseline --dataset synthetic_data.csv --run-id impeller-stem-full
+export TOGETHER_API_KEY=...
+export ANTHROPIC_API_KEY=...
 ```
 
-The output is a normal `results/<run_id>/responses.csv` with
-`model_id=impeller-stem-baseline`, so the existing evaluator can score it:
+One-shot (`split → upload → train → wait → infer → score`):
 
 ```bash
-uv run evaluator score --responses results/impeller-stem-smoke
+uv run finetune all --base-model meta-llama/Llama-3.2-3B-Instruct
 ```
 
-Notes:
+Or step by step: `split`, `upload`, `train`, `status`, `deploy`,
+`infer`, `score`, `stop` (or `deploy-eval-stop` for the last three).
+Per-run artifacts (job ids, endpoint info) land under
+`finetune/runs/<run_name>/`. Existing runs: Gemma 3 (270m, 1b),
+Llama 3.2 3B, Qwen3 8B, Qwen3.5 9B, Mercury 2. Data augmentation
+passes live in `finetune/augment*.py`.
 
-- The baseline ignores `formatting_prompt`; the existing pipeline has no prompt
-  channel and only formats spans detected by Impeller's NER.
-- `entity-detector.batch.06bc8f36.dg` is the model `/v2/read` needs for NER.
-- `nova-3-general.en.batch.2187e11a.dg` is not required by `runner baseline`,
-  but can stay in the same local Impeller model search path if you want the
-  local stack to mirror the broader Stem/Impeller setup.
+---
 
-Optional Docker path:
+## 3. Competitor STT (`competitor-formatting`)
+
+160 audio clips (10 per entity class), synthesized with Deepgram
+Aura-2 TTS, transcribed by each provider, judged by Claude Opus 4.7.
+See [`competitor-formatting/README.md`](competitor-formatting/README.md).
 
 ```bash
-cp .env.baseline.example .env
-docker compose -f docker-compose.baseline.yml build
-docker compose -f docker-compose.baseline.yml up
-uv run runner baseline \
-  --impeller-url http://localhost:18080/v2 \
-  --stem-url http://localhost:18888 \
-  --limit 50 \
-  --run-id impeller-stem-smoke
+export DEEPGRAM_API_KEY=...                      # TTS + Deepgram STT
+export ELEVENLABS_API_KEY / OPENAI_API_KEY / \
+       AZURE_SPEECH_KEY / GOOGLE_API_KEY / \
+       SONIOX_API_KEY=...                        # optional, per provider
+export ANTHROPIC_API_KEY=...                     # judge
+
+uv run python competitor-formatting/synthesize.py
+uv run python competitor-formatting/transcribe.py --providers all
+for p in deepgram elevenlabs openai azure google soniox; do
+  uv run python competitor-formatting/score.py --provider $p
+done
 ```
 
-## Resume
+All three steps are resumable.
 
-If the runner crashes, re-run with the same `--run-id`, or use the resume
-command which reads the run manifest:
+---
+
+## Prompt iteration (`iterate`)
+
+Tight loop while editing `prompts/system_prompt.md`. Runs a fixed
+stratified subset against cheap models, appends to a
+per-prompt-hash leaderboard.
 
 ```bash
-uv run runner resume <run_id>
+uv run iterate run --prompt prompts/system_prompt.md
+uv run iterate show --top 10
+uv run iterate failures iterate/results/iter-009-XXXX --model qwen3-32b-groq
+uv run iterate matrix --prompts prompts/variants/A.md,prompts/variants/B.md \
+                     --models qwen3-32b-groq,gpt-oss-120b-groq
 ```
 
-Rows already in `responses.csv` for that `(model_id, sample_id)` are skipped.
-Failed rows (those with `error` populated) are also considered "done" — delete
-them from `responses.csv` before resume if you want a retry.
-
-## Output
-
-Per run, under `results/<run_id>/`:
-
-- `responses.csv` — one row per `(model_id, sample_id)` with columns:
-  `run_id, model_id, provider, sample_id, base_prompt_hash, formatting_prompt,
-   input_text, expected_output, actual_output, latency_total_ms,
-   latency_ttft_ms, tokens_in, tokens_out, cost_usd, finish_reason, error,
-   attempted_at, completed_at`
-- `run_manifest.json` — timestamp, model list, base prompt + hash, sampling
-  defaults, git SHA, dataset checksum.
-
-At the end of the run the CLI prints total `$` spent (summed from the
-`cost_usd` field returned by OpenRouter's `usage.include` flag).
-
-## Editing models / prompts
-
-- Models live in `runner/models.py` as a dict-of-dicts. Add or remove entries
-  freely; `model_id` is the unique key written to `responses.csv`.
-- The base prompt lives at the top of `runner/prompts.py`. If you change it,
-  the hash changes, and that hash is recorded with every row — so old and new
-  results stay distinguishable.
-- Several OpenRouter slugs are best-effort (flagged with `TODO`); verify
-  against `https://openrouter.ai/api/v1/models` before the live run.
+`iterate/` deliberately bypasses `runner/prompts.py` and assembles its
+own `<transcript>...</transcript>`-spotlit messages — keep that in
+mind if you change message construction in either place.
