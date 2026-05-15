@@ -1,0 +1,10 @@
+{
+  "base_model": "Qwen/Qwen3-8B",
+  "file_id": "file-530fe991-4a8a-4b1c-9c8b-3e158df0ad47",
+  "job_id": "ft-d9da520a-fbd1",
+  "learning_rate": 0.0001,
+  "n_epochs": 3,
+  "output_name": "shawndhawan_cce0/Qwen3-8B-smart-fmt-qwen3-8b-a719bce8",
+  "status": "pending",
+  "suffix": "smart-fmt-qwen3-8b"
+}

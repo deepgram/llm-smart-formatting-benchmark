@@ -1,0 +1,5 @@
+{
+  "base_model": "Qwen/Qwen3-8B",
+  "output_name": "Qwen/Qwen3-8B",
+  "note": "Not a fine-tune; placeholder so the deploy/eval CLI can target the base model on a dedicated endpoint."
+}

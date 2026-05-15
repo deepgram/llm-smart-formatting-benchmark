@@ -1,0 +1,10 @@
+{
+  "id": "endpoint-2c068868-dcab-453e-9cc5-2eb5d6544bbe",
+  "name": "shawndhawan_cce0/Llama-3.2-3B-Instruct-smart-fmt-llama-3.2-3b-v3-4efc71d3-b9338021",
+  "model": "shawndhawan_cce0/Llama-3.2-3B-Instruct-smart-fmt-llama-3.2-3b-v3-4efc71d3",
+  "hardware": "4x_nvidia_h100_80gb_sxm",
+  "display_name": "ft-eval-llama-3.2-3b-v3",
+  "inactive_timeout": 10,
+  "created_at": "2026-05-15T07:49:42Z",
+  "run_id": "ft-llama-3.2-3b-v3-c1-20260515T074941Z"
+}

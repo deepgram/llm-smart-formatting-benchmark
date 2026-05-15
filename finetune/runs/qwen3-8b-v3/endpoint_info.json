@@ -1,0 +1,10 @@
+{
+  "id": "endpoint-d64867ef-e696-4f1d-80ff-955804cbf34f",
+  "name": "shawndhawan_cce0/Qwen3-8B-smart-fmt-qwen3-8b-v3-ec4f59d1-c27bd085",
+  "model": "shawndhawan_cce0/Qwen3-8B-smart-fmt-qwen3-8b-v3-ec4f59d1",
+  "hardware": "1x_nvidia_h100_80gb_sxm",
+  "display_name": "ft-eval-qwen3-8b-v3",
+  "inactive_timeout": 10,
+  "created_at": "2026-05-15T07:49:41Z",
+  "run_id": "ft-qwen3-8b-v3-c1-20260515T074941Z"
+}

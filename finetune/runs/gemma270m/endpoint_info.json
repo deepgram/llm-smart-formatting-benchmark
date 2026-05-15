@@ -1,0 +1,10 @@
+{
+  "id": "endpoint-cf997b1e-41e7-4581-acd1-83bd4d779f73",
+  "name": "shawndhawan_cce0/gemma-3-270m-it-smart-fmt-gemma270m-f02d2dc0-a302a82f",
+  "model": "shawndhawan_cce0/gemma-3-270m-it-smart-fmt-gemma270m-f02d2dc0",
+  "hardware": "4x_nvidia_h100_80gb_sxm",
+  "display_name": "ft-eval-gemma270m",
+  "inactive_timeout": 10,
+  "created_at": "2026-05-12T20:53:04Z",
+  "run_id": "ft-gemma-3-270m-it-smart-fmt-20260512T205258Z"
+}

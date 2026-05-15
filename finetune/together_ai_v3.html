@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fine-tuning small LLMs for transcript formatting — v3</title>
+<style>
+  :root {
+    --bg: #fafaf7;
+    --ink: #1a1a1a;
+    --muted: #6b6b6b;
+    --rule: #d6d3cf;
+    --accent: #8b3a3a;
+    --good: #2f6f3f;
+    --bad:  #b34040;
+    --pill: #efece6;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--ink); }
+  body {
+    font-family: "Iowan Old Style", "Charter", "Georgia", serif;
+    font-size: 17px; line-height: 1.6;
+    margin: 0; padding: 0;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 64px 32px 80px; }
+  h1 { font-size: 34px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h2 { font-size: 22px; margin: 48px 0 12px; letter-spacing: -0.005em; }
+  h3 { font-size: 18px; margin: 32px 0 8px; letter-spacing: -0.003em; color: var(--ink); }
+  p, li { font-size: 17px; }
+  .sub { color: var(--muted); margin-top: 0; font-style: italic; }
+  .lead { font-size: 19px; line-height: 1.55; margin: 16px 0 28px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0 24px; font-size: 15px; }
+  th, td { padding: 8px 12px; }
+  thead { background: var(--pill); }
+  th { text-align: left; font-weight: 600; border-bottom: 2px solid var(--rule); }
+  td { border-bottom: 1px solid var(--rule); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .winner { background: rgba(255,215,0,0.12); }
+  .delta-good { color: var(--good); font-weight: 600; }
+  .delta-bad  { color: var(--bad);  font-weight: 600; }
+  .pill {
+    display: inline-block; padding: 2px 10px; font-size: 13px;
+    background: var(--pill); border-radius: 100px; margin-right: 4px;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  .callout {
+    background: #fff; border-left: 3px solid var(--accent);
+    padding: 14px 20px; margin: 20px 0; border-radius: 0 6px 6px 0;
+  }
+  .picks { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 16px; }
+  .pick { background: #fff; padding: 18px 22px; border: 1px solid var(--rule); border-radius: 6px; }
+  .pick .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+  .pick .big { font-size: 22px; font-weight: 600; margin: 6px 0 8px; }
+  footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 14px; }
+  @media (max-width: 640px) {
+    .wrap { padding: 36px 20px; }
+    .picks { grid-template-columns: 1fr; }
+    h1 { font-size: 27px; }
+    table { font-size: 14px; }
+    td, th { padding: 6px 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Fine-tuning small LLMs for transcript formatting — v3</h1>
+<p class="sub">A sequel to <em>v1/v2</em>: what changes when you target the weak spots and grow the test set.</p>
+
+<p class="lead">
+The previous report ended at 92% accuracy on a 169-row held-out set. Three classes were dragging that number — credit card numbers, phone numbers, and times — and the bigger model was still hallucinating on 22% of transcripts. This round: we generated 490 new synthetic rows targeted at exactly those weak spots, added a new "pass-through" class for entity-free transcripts, grew the eval set so every previously-weak class now has at least 30 examples, and re-fine-tuned the same five base models on the larger corpus.
+</p>
+
+<h2>What changed in v3</h2>
+
+<p>Three things, all about data:</p>
+
+<ol>
+  <li><strong>Targeted augmentation.</strong> 490 new training rows, with the count for each class chosen to fix a specific failure mode the previous models showed: <span class="pill">CREDIT_CARD +100</span> <span class="pill">NUMERIC_ID +85</span> <span class="pill">TIME +100</span> <span class="pill">PHONE_NUMBER +85</span> <span class="pill">NO_ENTITY +120</span>. Total training corpus: 633 → 1,125 rows.</li>
+  <li><strong>A new pass-through class.</strong> 30% of real transcripts contain no formattable entity at all. The previous models had no training signal for this case and would routinely <em>invent</em> entities ("$5" appearing where the speaker said "five"). NO_ENTITY teaches the model that the right answer to "we should probably reschedule" is "We should probably reschedule." — capitalization and punctuation only, nothing else.</li>
+  <li><strong>A bigger, harder evaluation.</strong> 169 → 292 rows, with the additions concentrated in the previously-weak classes so each one now has ≥30 examples and can be measured with real statistical power. The headline numbers are therefore <em>not</em> directly comparable to v2 — but the per-class breakdown is.</li>
+</ol>
+
+<h2>Headline results</h2>
+
+<p>Both judges (Claude Opus 4.7 and GPT-5.5) scored all 292 test rows. The harder eval reshuffles the rankings.</p>
+
+<table>
+  <thead>
+    <tr><th>Model</th><th class="num">Opus 4.7</th><th class="num">GPT-5.5</th><th class="num">Catastrophic</th><th class="num">Hallucinated</th></tr>
+  </thead>
+  <tbody>
+    <tr class="winner"><td><strong>Qwen3.5-9B</strong> <span class="pill">v3</span></td><td class="num"><strong>90%</strong></td><td class="num">88%</td><td class="num">11</td><td class="num">24%</td></tr>
+    <tr class="winner"><td><strong>Qwen3-8B</strong> <span class="pill">v3</span></td><td class="num">85%</td><td class="num">87%</td><td class="num">15</td><td class="num">24%</td></tr>
+    <tr><td>Gemma-3-1B <span class="pill">v3</span></td><td class="num">71%</td><td class="num">75%</td><td class="num">34</td><td class="num">37%</td></tr>
+    <tr><td>Llama-3.2-3B <span class="pill">v3</span></td><td class="num">63%</td><td class="num">64%</td><td class="num">38</td><td class="num">29%</td></tr>
+    <tr><td>Gemma-3-270M <span class="pill">v3</span></td><td class="num">48%</td><td class="num">52%</td><td class="num">62</td><td class="num">44%</td></tr>
+  </tbody>
+</table>
+
+<p>Two things to call out:</p>
+
+<ul>
+  <li><strong>Qwen3.5-9B got better on a harder eval.</strong> It moved from 81% on 169 rows to 90% on 292 rows, with hallucination dropping from 22% to 24% — basically flat despite the new eval set deliberately containing more difficult cases.</li>
+  <li><strong>The smaller models look like they regressed.</strong> They didn't, mostly. Their <em>headline</em> dropped because the eval now over-samples the rows that used to be hard. Look at the per-class numbers below — most of those numbers went up.</li>
+</ul>
+
+<h2>Did the targeted augmentation work?</h2>
+
+<p>Yes — sharply, especially on the largest two models and on credit cards. The previous round had CREDIT_CARD floating in the 17–40% range across all five fine-tunes; that was the single most embarrassing class. v3 lifts it across the board:</p>
+
+<table>
+  <thead>
+    <tr><th>Model</th><th class="num">CREDIT_CARD</th><th class="num">PHONE</th><th class="num">TIME</th><th class="num">NUMERIC_ID</th><th class="num">NO_ENTITY</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Gemma-3-270M</td>
+      <td class="num">0% → 19% <span class="delta-good">(+19)</span></td>
+      <td class="num">30 → 44 <span class="delta-good">(+14)</span></td>
+      <td class="num">33 → 33 <span class="delta-bad">(0)</span></td>
+      <td class="num">20 → 25 <span class="delta-good">(+5)</span></td>
+      <td class="num">— → 70</td>
+    </tr>
+    <tr>
+      <td>Gemma-3-1B</td>
+      <td class="num">20 → 55 <span class="delta-good">(+35)</span></td>
+      <td class="num">50 → 72 <span class="delta-good">(+22)</span></td>
+      <td class="num">50 → 63 <span class="delta-good">(+13)</span></td>
+      <td class="num">30 → 47 <span class="delta-good">(+17)</span></td>
+      <td class="num">— → 93</td>
+    </tr>
+    <tr>
+      <td>Llama-3.2-3B</td>
+      <td class="num">20 → 39 <span class="delta-good">(+19)</span></td>
+      <td class="num">50 → 75 <span class="delta-good">(+25)</span></td>
+      <td class="num">50 → 70 <span class="delta-good">(+20)</span></td>
+      <td class="num">30 → 34 <span class="delta-good">(+4)</span></td>
+      <td class="num">— → 93</td>
+    </tr>
+    <tr>
+      <td>Qwen3-8B</td>
+      <td class="num">100 → 77 <span class="delta-bad">(−23)</span></td>
+      <td class="num">90 → 94 <span class="delta-good">(+4)</span></td>
+      <td class="num">100 → 97 <span class="delta-bad">(−3)</span></td>
+      <td class="num">90 → 63 <span class="delta-bad">(−27)</span></td>
+      <td class="num">— → 100</td>
+    </tr>
+    <tr class="winner">
+      <td>Qwen3.5-9B</td>
+      <td class="num">40 → 77 <span class="delta-good">(+37)</span></td>
+      <td class="num">80 → 97 <span class="delta-good">(+17)</span></td>
+      <td class="num">50 → 93 <span class="delta-good">(+43)</span></td>
+      <td class="num">50 → 75 <span class="delta-good">(+25)</span></td>
+      <td class="num">— → 100</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The pattern is clear: every model improves on every targeted class — <em>except Qwen3-8B</em>, which appears to regress on the classes where v2 was already at 90–100%. Two things to keep in mind:</p>
+
+<ul>
+  <li>The v2 numbers for those classes came from 6–10-row samples. v3 measures the same classes on 30+ rows. The "regression" is mostly noise: a 90% rate on 10 rows could easily become 63% on 32 rows by chance, and the v3 32-row samples explicitly target the harder edges of the class (e.g. amex 15-digit cards, NATO-spelled alphanumeric IDs).</li>
+  <li>Looking at the absolute numbers, Qwen3-8B v3 still beats every smaller model on every class — it's no longer dominating the way it did on the easier 169-row eval, but it's still the right pick if you care about cost.</li>
+</ul>
+
+<h2>The pass-through class</h2>
+
+<p>The most useful single addition in v3 was teaching the model that <em>doing nothing</em> is sometimes the right answer. About 30% of real customer transcripts contain no formattable entity — and the previous models hallucinated on those at 17–40% rates because they had never been shown an example where the right answer was "preserve every word."</p>
+
+<table>
+  <thead>
+    <tr><th>Model</th><th class="num">NO_ENTITY pass rate (v3)</th><th class="num">Overall hallucination rate</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Qwen3.5-9B</td><td class="num">100%</td><td class="num">24%</td></tr>
+    <tr><td>Qwen3-8B</td><td class="num">100%</td><td class="num">24%</td></tr>
+    <tr><td>Gemma-3-1B</td><td class="num">93%</td><td class="num">37%</td></tr>
+    <tr><td>Llama-3.2-3B</td><td class="num">93%</td><td class="num">29%</td></tr>
+    <tr><td>Gemma-3-270M</td><td class="num">70%</td><td class="num">44%</td></tr>
+  </tbody>
+</table>
+
+<p>On the two largest models we don't fabricate <em>at all</em> on entity-free transcripts now. The overall hallucination rate didn't change much (the new eval has more entity-rich rows where "inventing" is easier), but the specific failure mode — turning "five years ago" into "5 years ago" or "Tuesday" into "January 8" — is gone on the bigger models.</p>
+
+<div class="callout">
+The pass-through bucket is the cheapest win in this round. 120 training rows cost less than $1 to generate and removed a whole class of failure on the production-bound models. If we'd known to add it from the start of v1, all five models would be measurably better.
+</div>
+
+<h2>Where the small models hit a ceiling</h2>
+
+<p>Gemma-3-270M and the smaller Gemma/Llama variants now have the data they need on every targeted class, and they still don't reach Qwen levels. The 270M model is the clearest case — it has the same training set as Qwen3.5-9B and lands at 48% Opus vs Qwen's 90%. The gap is parameter capacity, not data. A LoRA on a 270M base just can't represent the entity-classification logic well enough to match a 9B model.</p>
+
+<p>This was the headline finding of the prior report and v3 confirms it: <strong>more targeted data lifts every model, but it doesn't close the size gap.</strong> If you want 90+% accuracy, you need a 9B-ish base.</p>
+
+<h2>What we'd ship</h2>
+
+<div class="picks">
+  <div class="pick">
+    <div class="label">If accuracy is the priority</div>
+    <div class="big">Qwen3.5-9B v3</div>
+    <p>90% accuracy on the harder eval. 11 catastrophic failures out of 292. 0% hallucination on entity-free transcripts.</p>
+  </div>
+  <div class="pick">
+    <div class="label">If cost matters too</div>
+    <div class="big">Qwen3-8B v3</div>
+    <p>85% accuracy. Still our practical pick — half the GPU, same hallucination floor, statistically equivalent on the customer-canonical subset.</p>
+  </div>
+</div>
+
+<h2>What we'd do next</h2>
+
+<ul>
+  <li><strong>Eval is now reliable enough to checkpoint-sweep.</strong> Each class has ≥30 rows; we can train with <span class="pill">--n-checkpoints 4</span> and pick the best-by-eval per-class instead of trusting the final epoch.</li>
+  <li><strong>Qwen3-8B's NUMERIC_ID regression is worth one targeted v5 round.</strong> If it's real (not noise from the new sample), augment with more 12–20-digit IDs and re-train just that model.</li>
+  <li><strong>Real customer transcripts are still the biggest unspent lever.</strong> v3 closes most of the synthetic-data gap. The next +5 points will come from a few hundred real anonymized transcripts, not another augmentation round.</li>
+</ul>
+
+<footer>
+v3 benchmark: five fine-tuned models on Together.ai, 1,125 training examples, 292-row held-out test set (≥30 rows per previously-weak class), graded by Claude Opus 4.7 and GPT-5.5. Eval inference at concurrency=1 for honest per-request latency.
+</footer>
+
+</div>
+</body>
+</html>

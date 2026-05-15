@@ -39,7 +39,11 @@ from evaluator.aggregate import (
     write_canonical_csv,
     write_summary_csv,
 )
-from evaluator.judge import JudgeClient, JUDGE_MODEL_DEFAULT
+from evaluator.judge import (
+    JudgeClient,
+    JUDGE_MODEL_DEFAULT,
+    JUDGE_MODEL_SECONDARY_DEFAULT,
+)
 from evaluator.report import render_report, write_report
 from evaluator.scorers import exact_match, regex_pass
 
@@ -674,6 +678,267 @@ def determinism_cmd(
     console.print(table)
     console.print(f"\n[green]Wrote[/green] {summary_path}")
     console.print(f"[green]Wrote[/green] {per_sample_path}")
+
+
+# ============================================================
+# Second-judge subcommand: augment an existing scored.csv with a second
+# judge model (e.g. gpt-5.5 cross-checking Opus).
+# ============================================================
+
+
+_JUDGE2_COLUMNS = [
+    "judge2_model",
+    "judge2_accuracy",
+    "judge2_accuracy_reason",
+    "judge2_promptability",
+    "judge2_promptability_reason",
+    "judge2_catastrophic",
+    "judge2_hallucination",
+    "judge2_hallucination_reason",
+    "judge2_error",
+    "judges_agree",
+]
+
+
+def _judges_agree(
+    primary_acc: str,
+    primary_hal: str,
+    secondary_acc: str,
+    secondary_hal: str,
+) -> str:
+    """Both judges produced a non-empty verdict AND those verdicts match."""
+    if not primary_acc or not secondary_acc:
+        return ""
+    if not primary_hal or not secondary_hal:
+        return ""
+    return "True" if (primary_acc == secondary_acc and primary_hal == secondary_hal) else "False"
+
+
+async def _second_judge_one(
+    judge: JudgeClient,
+    rec: dict[str, str],
+    dataset_lookup: dict[str, dict[str, str]],
+) -> dict[str, str]:
+    sample_id = rec.get("sample_id", "") or ""
+    actual = rec.get("actual_output", "") or ""
+    expected = rec.get("expected_output", "") or ""
+    formatting_prompt = rec.get("formatting_prompt", "") or ""
+    input_text = rec.get("input_text", "") or ""
+
+    meta = dataset_lookup.get(sample_id, {})
+    entity_class = meta.get("entity_class", "")
+    variant = meta.get("variant", "")
+
+    out: dict[str, str] = {
+        "judge2_model": judge.model,
+        "judge2_accuracy": "",
+        "judge2_accuracy_reason": "",
+        "judge2_promptability": "",
+        "judge2_promptability_reason": "",
+        "judge2_catastrophic": "",
+        "judge2_hallucination": "",
+        "judge2_hallucination_reason": "",
+        "judge2_error": "",
+        "judges_agree": "",
+    }
+
+    if rec.get("error"):
+        # Match _score_one's behavior for runner-errored rows: don't burn a
+        # judge call.
+        out["judge2_accuracy"] = "other"
+        out["judge2_accuracy_reason"] = f"runner error: {rec['error'][:120]}"
+        out["judge2_promptability"] = "n_a" if not formatting_prompt else "ignored"
+        out["judge2_promptability_reason"] = "no candidate output"
+        out["judge2_catastrophic"] = "False"
+        out["judge2_hallucination"] = "none"
+        out["judge2_hallucination_reason"] = "no candidate output"
+    else:
+        try:
+            acc_task = judge.judge_accuracy(
+                formatting_prompt=formatting_prompt,
+                input_text=input_text,
+                expected_output=expected,
+                actual_output=actual,
+                entity_class=entity_class,
+                variant=variant,
+            )
+            hal_task = judge.judge_hallucination(
+                input_text=input_text,
+                actual_output=actual,
+            )
+            acc, hal = await asyncio.gather(acc_task, hal_task)
+            out["judge2_accuracy"] = acc.accuracy
+            out["judge2_accuracy_reason"] = acc.accuracy_reason
+            out["judge2_promptability"] = acc.promptability
+            out["judge2_promptability_reason"] = acc.promptability_reason
+            out["judge2_catastrophic"] = "True" if acc.catastrophic else "False"
+            out["judge2_hallucination"] = hal.hallucination
+            out["judge2_hallucination_reason"] = hal.hallucination_reason
+        except Exception as e:
+            out["judge2_error"] = f"{type(e).__name__}: {e}"
+
+    out["judges_agree"] = _judges_agree(
+        rec.get("judge_accuracy", "") or "",
+        rec.get("judge_hallucination", "") or "",
+        out["judge2_accuracy"],
+        out["judge2_hallucination"],
+    )
+    return out
+
+
+@app.command("second-judge")
+def second_judge_cmd(
+    responses: Path = typer.Option(
+        ...,
+        "--responses",
+        help="Run dir or scored.csv path to augment with a second judge.",
+    ),
+    judge_model: str = typer.Option(
+        JUDGE_MODEL_SECONDARY_DEFAULT,
+        "--judge-model",
+        help="Secondary judge model. Examples: gpt-5.5 (OpenAI), claude-sonnet-4-6 (Anthropic).",
+    ),
+    dataset: Path = typer.Option(
+        Path("synthetic_data.csv"),
+        "--dataset",
+        help="Path to the synthetic dataset (for entity_class / variant lookups).",
+    ),
+    concurrency: int = typer.Option(
+        8, "--concurrency", help="Concurrent in-flight judge calls."
+    ),
+    limit: Optional[int] = typer.Option(
+        None, "--limit", help="Cap rows for smoke tests."
+    ),
+    models: Optional[str] = typer.Option(
+        None,
+        "--models",
+        help="Comma-separated model_ids to filter on (default: every row in scored.csv).",
+    ),
+    flush_every: int = typer.Option(
+        25,
+        "--flush-every",
+        help="Persist scored.csv every N completed rows.",
+    ),
+) -> None:
+    """Augment an existing scored.csv with a second judge's verdicts.
+
+    Adds ``judge2_*`` columns next to the existing ``judge_*`` columns.
+    Re-running with the same secondary judge skips rows that already have a
+    non-empty ``judge2_accuracy``.
+    """
+    # Accept either the run dir or the scored.csv itself.
+    if responses.is_dir():
+        scored_path = responses / "scored.csv"
+    elif responses.name == "responses.csv":
+        scored_path = responses.parent / "scored.csv"
+    else:
+        scored_path = responses
+    if not scored_path.exists():
+        console.print(f"[red]scored.csv not found:[/red] {scored_path}")
+        raise typer.Exit(code=2)
+    if not dataset.exists():
+        console.print(f"[red]dataset not found:[/red] {dataset}")
+        raise typer.Exit(code=2)
+
+    df_scored = pd.read_csv(scored_path, dtype=str, keep_default_na=False)
+    df_data = _load_dataset(dataset)
+    dataset_lookup = {row["id"]: dict(row) for _, row in df_data.iterrows()}
+
+    # Ensure judge2 columns exist (fill blank).
+    for col in _JUDGE2_COLUMNS:
+        if col not in df_scored.columns:
+            df_scored[col] = ""
+
+    work_mask = df_scored["judge2_accuracy"].astype(str).str.len().eq(0)
+    if models:
+        wanted = {m.strip() for m in models.split(",") if m.strip()}
+        work_mask &= df_scored["model_id"].isin(wanted)
+    todo_idx = df_scored.index[work_mask].tolist()
+    if limit is not None:
+        todo_idx = todo_idx[:limit]
+
+    n_total = len(df_scored)
+    n_already = n_total - int(work_mask.sum())
+    console.print(
+        f"[cyan]Second-judge[/cyan] {scored_path} — "
+        f"{len(todo_idx)} rows to judge (total={n_total}, already_done={n_already}) "
+        f"with judge=[bold]{judge_model}[/bold] concurrency={concurrency}"
+    )
+    if not todo_idx:
+        console.print("[green]Nothing to do.[/green]")
+        return
+
+    judge = JudgeClient(model=judge_model, concurrency=concurrency)
+
+    async def _run() -> None:
+        progress = Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            MofNCompleteColumn(),
+            TextColumn("•"),
+            TimeElapsedColumn(),
+            console=console,
+        )
+        completed_since_flush = 0
+        flush_lock = asyncio.Lock()
+
+        async def _flush() -> None:
+            # Re-order columns: keep the original ordering, then any new ones.
+            cols = list(df_scored.columns)
+            df_scored.to_csv(scored_path, index=False, columns=cols)
+
+        try:
+            with progress:
+                task_id = progress.add_task(
+                    f"[cyan]judging[/cyan] ({judge_model})", total=len(todo_idx)
+                )
+
+                async def worker(idx: int) -> None:
+                    nonlocal completed_since_flush
+                    rec = {c: df_scored.at[idx, c] for c in df_scored.columns}
+                    result = await _second_judge_one(judge, rec, dataset_lookup)
+                    for k, v in result.items():
+                        df_scored.at[idx, k] = v
+                    progress.update(
+                        task_id,
+                        advance=1,
+                        description=(
+                            f"[cyan]judging[/cyan] ({judge_model}) "
+                            f"calls={judge.cost.calls} err={judge.cost.errors} "
+                            f"${judge.cost.total_usd:.3f}"
+                        ),
+                    )
+                    async with flush_lock:
+                        completed_since_flush += 1
+                        if completed_since_flush >= flush_every:
+                            completed_since_flush = 0
+                            await _flush()
+
+                await asyncio.gather(*(worker(i) for i in todo_idx))
+                await _flush()
+        finally:
+            await judge.aclose()
+
+    asyncio.run(_run())
+
+    summary = judge.cost.summary()
+    console.print(
+        f"Judge calls: {summary['calls']}  errors: {summary['errors']}  "
+        f"cost: [bold]${summary['total_usd']:.4f}[/bold]"
+    )
+    # Quick agreement readout.
+    both = (
+        df_scored["judge_accuracy"].astype(str).str.len().gt(0)
+        & df_scored["judge2_accuracy"].astype(str).str.len().gt(0)
+    )
+    agree = (df_scored.loc[both, "judges_agree"] == "True").sum()
+    n_both = int(both.sum())
+    if n_both:
+        console.print(
+            f"Judge agreement: {agree}/{n_both} = "
+            f"[bold]{100.0 * agree / n_both:.1f}%[/bold]"
+        )
 
 
 def main() -> None:  # pragma: no cover

@@ -1,0 +1,10 @@
+{
+  "id": "endpoint-c259e10d-0c85-4724-882a-a1477a486fc4",
+  "name": "shawndhawan_cce0/Qwen3.5-9B-smart-fmt-qwen3.5-9b-v2-205f6658-42b97017",
+  "model": "shawndhawan_cce0/Qwen3.5-9B-smart-fmt-qwen3.5-9b-v2-205f6658",
+  "hardware": "2x_nvidia_h100_80gb_sxm",
+  "display_name": "ft-eval-qwen3.5-9b-v2",
+  "inactive_timeout": 0,
+  "created_at": "2026-05-13T22:27:56Z",
+  "run_id": "ft-qwen3.5-9b-v2-c1-20260513T222749Z"
+}

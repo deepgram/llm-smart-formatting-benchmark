@@ -1,0 +1,10 @@
+{
+  "base_model": "google/gemma-3-1b-it",
+  "file_id": "file-e8ed53ea-578c-4b32-b865-a686753caf9b",
+  "job_id": "ft-0908b0a4-d362",
+  "learning_rate": 0.0001,
+  "n_epochs": 3,
+  "output_name": "shawndhawan_cce0/gemma-3-1b-it-smart-fmt-gemma-3-1b-v2-1254a189",
+  "status": "completed",
+  "suffix": "smart-fmt-gemma-3-1b-v2"
+}
